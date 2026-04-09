@@ -1,0 +1,45 @@
+# .gitignore para copilot-sprint-workspace
+
+# ─── Secretos y configuración personal (NUNCA versionar) ─────────────────────
+.env
+.env.*
+*.secret
+*.key
+*.pem
+
+# ─── Configuración activa (depende de la máquina/usuario) ────────────────────
+config/active-profile.json
+config/active-workflow.json
+
+# ─── Artefactos temporales de evidencias ─────────────────────────────────────
+tmp/
+*.b64
+*.dataurl
+
+# ─── Archivos de sistema ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# ─── Java / Build outputs (si el repo incluye código) ────────────────────────
+target/
+*.class
+*.jar
+build/
+
+# ─── Node (si se usa para scripts) ───────────────────────────────────────────
+node_modules/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── herramienta JAR del MCP (descargada localmente) ─────────────────────────
+tools/*.jar

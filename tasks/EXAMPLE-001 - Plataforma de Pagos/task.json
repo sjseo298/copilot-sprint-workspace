@@ -1,0 +1,19 @@
+{
+  "workItemId": "EXAMPLE-001",
+  "title": "Plataforma de Pagos - Arquitectura Base",
+  "type": "task",
+  "state": "Cerrado",
+  "assignedTo": "developer@example.com",
+  "scheduledDate": "2026-01-05",
+  "week": 1,
+  "syncStatus": "done",
+  "_note": "Este es un ejemplo ficticio para ilustrar la estructura. Reemplaza o elimina antes de usar el workspace en producción.",
+  "adoSync": {
+    "ready": true,
+    "createdId": null
+  },
+  "evidencia": {
+    "files": ["subtarea_EXAMPLE-001-ST1_diseno_componentes_evidencia.md"],
+    "lastUpdated": "2026-01-08"
+  }
+}

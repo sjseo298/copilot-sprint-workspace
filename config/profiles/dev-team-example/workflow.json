@@ -1,0 +1,35 @@
+{
+  "states": {
+    "active": ["New", "Active", "In Progress", "Resolved"],
+    "closed": ["Closed", "Done"]
+  },
+  "hierarchy": ["epic", "story", "task"],
+  "workItemTypes": {
+    "feature": "Epic",
+    "task": "User Story",
+    "subtask": "Task"
+  },
+  "folderPattern": "tasks/{id} - {title}/",
+  "autoCreateFolder": true,
+  "evidenceTemplate": "blank",
+  "tags": {
+    "team": ["backend", "api"],
+    "quarterFormat": "Q{Q}-{YEAR}"
+  },
+  "fields": {
+    "Epic": {
+      "required": ["System.Title", "System.Description"],
+      "custom": {}
+    },
+    "User Story": {
+      "required": ["System.Title", "System.Description", "Microsoft.VSTS.Common.AcceptanceCriteria", "System.AssignedTo", "Microsoft.VSTS.Scheduling.StoryPoints"],
+      "custom": {}
+    },
+    "Task": {
+      "required": ["System.Title", "System.AssignedTo", "Microsoft.VSTS.Scheduling.RemainingWork", "Microsoft.VSTS.Common.Activity"],
+      "custom": {}
+    }
+  },
+  "activities": ["Development", "Testing", "Design", "Documentation"],
+  "commentTemplate": "markdown"
+}

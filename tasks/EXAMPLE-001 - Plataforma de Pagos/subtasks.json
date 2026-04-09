@@ -1,0 +1,46 @@
+[
+  {
+    "workItemId": "EXAMPLE-001-ST1",
+    "title": "Diseño de componentes de integración",
+    "description": "Definir la arquitectura de los adaptadores de pago y los contratos de la API interna.",
+    "type": "subtask",
+    "state": "Cerrado",
+    "assignedTo": "developer@example.com",
+    "prioridad": 1,
+    "actividad": "Design",
+    "estimacionInicial": 2,
+    "remainingWork": 4,
+    "scheduledDate": "2026-01-05",
+    "evidenciaFile": "subtarea_EXAMPLE-001-ST1_diseno_componentes_evidencia.md",
+    "evidenciaAdjuntada": false,
+    "adoFields": {
+      "System.Title": "Diseño de componentes de integración",
+      "System.State": "Cerrado",
+      "Microsoft.VSTS.Common.Activity": "Design",
+      "Microsoft.VSTS.Scheduling.RemainingWork": 4
+    },
+    "syncStatus": "done"
+  },
+  {
+    "workItemId": "EXAMPLE-001-ST2",
+    "title": "Implementación del adaptador de pasarela",
+    "description": "Desarrollar el adaptador para la pasarela de pagos siguiendo el patrón definido en ST1.",
+    "type": "subtask",
+    "state": "Cerrado",
+    "assignedTo": "developer@example.com",
+    "prioridad": 1,
+    "actividad": "Development",
+    "estimacionInicial": 3,
+    "remainingWork": 6,
+    "scheduledDate": "2026-01-06",
+    "evidenciaFile": null,
+    "evidenciaAdjuntada": false,
+    "adoFields": {
+      "System.Title": "Implementación del adaptador de pasarela",
+      "System.State": "Cerrado",
+      "Microsoft.VSTS.Common.Activity": "Development",
+      "Microsoft.VSTS.Scheduling.RemainingWork": 6
+    },
+    "syncStatus": "done"
+  }
+]

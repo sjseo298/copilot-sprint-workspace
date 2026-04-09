@@ -1,0 +1,65 @@
+{
+  "states": {
+    "active": ["New", "En progreso", "Impedimento"],
+    "closed": ["Cerrado"]
+  },
+  "hierarchy": ["feature", "task", "subtask"],
+  "workItemTypes": {
+    "feature": "Feature",
+    "task": "Tarea",
+    "subtask": "Subtarea"
+  },
+  "folderPattern": "tasks/{id} - {title}/",
+  "autoCreateFolder": true,
+  "evidenceTemplate": "predefined",
+  "tags": {
+    "team": ["[ARQ] Automatización Arquitectura"],
+    "quarterFormat": "T{Q}-{YEAR}"
+  },
+  "fields": {
+    "Feature": {
+      "required": ["System.Title", "System.Description", "Microsoft.VSTS.Common.AcceptanceCriteria", "System.AreaPath", "System.IterationPath", "System.Tags", "Microsoft.VSTS.Scheduling.Effort"],
+      "custom": {}
+    },
+    "Tarea": {
+      "required": ["System.Title", "System.Description", "Microsoft.VSTS.Common.AcceptanceCriteria", "System.AssignedTo", "System.AreaPath", "System.IterationPath", "System.Tags", "Custom.Prioridad"],
+      "custom": {
+        "Custom.Prioridad": {
+          "displayName": "Prioridad",
+          "type": "picklistInteger",
+          "required": true,
+          "allowedValues": [1, 2],
+          "closedList": true
+        }
+      }
+    },
+    "Subtarea": {
+      "required": ["System.Title", "System.Description", "System.AssignedTo", "System.AreaPath", "System.IterationPath", "System.Tags", "Custom.Prioridad", "Microsoft.VSTS.Scheduling.RemainingWork", "Microsoft.VSTS.Common.Activity", "Custom.EstimacionInicial"],
+      "custom": {
+        "Custom.Prioridad": {
+          "displayName": "Prioridad",
+          "type": "picklistInteger",
+          "required": true,
+          "allowedValues": [1, 2],
+          "closedList": true
+        },
+        "Custom.EstimacionInicial": {
+          "displayName": "Estimación Inicial",
+          "type": "picklistInteger",
+          "required": true,
+          "allowedValues": [1, 2, 3, 5, 8],
+          "closedList": true
+        },
+        "Custom.TipoDeSubtarea": {
+          "displayName": "Tipo de subtarea",
+          "type": "picklistString",
+          "required": false,
+          "allowedValues": ["Subtarea", "Bug"],
+          "closedList": true
+        }
+      }
+    }
+  },
+  "activities": ["Development", "Analysis", "Design", "Testing", "Documentation"],
+  "commentTemplate": "html"
+}

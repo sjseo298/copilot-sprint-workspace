@@ -1,0 +1,20 @@
+Sprint: SPRINT-01
+Fechas del Sprint: 2026-01-05 hasta 2026-01-16
+Dias habiles: 11
+Horas disponibles: 93.5
+Reuniones fijas semana 1:
+  Lunes: Planning (4h)
+  Miercoles: Comite tecnico (1h)
+Reuniones fijas semana 2:
+  Jueves: Review (2h)
+  Viernes: Retrospectiva (1h)
+Otros compromisos:
+  Ninguno
+Impedimentos conocidos:
+  Ninguno
+
+# Formato esperado:
+# - Sprint: nombre del sprint
+# - Fechas: DD-MM-YYYY o YYYY-MM-DD
+# - Reuniones fijas: para calcular capacidad real
+# - Impedimentos: bloqueos conocidos al iniciar el sprint

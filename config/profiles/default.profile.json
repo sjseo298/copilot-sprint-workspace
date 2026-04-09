@@ -1,0 +1,27 @@
+{
+  "_comment": "Plantilla con todas las claves disponibles. Copia este archivo a config/profiles/<nombre-equipo>/profile.json y rellena los valores.",
+  "name": "Nombre del equipo",
+  "ado": {
+    "organization": "mi-organizacion",
+    "project": "Mi_Proyecto_ADO",
+    "team": "nombre-del-equipo"
+  },
+  "user": {
+    "email": "usuario@empresa.com",
+    "displayName": "Nombre Completo"
+  },
+  "userRole": "both",
+  "_userRoleOptions": ["creator", "developer", "both"],
+  "_userRoleDesc": {
+    "creator": "Solo crea y asigna historias. Vista equipo en sprint-manager.",
+    "developer": "Solo ejecuta work items asignados. Vista individual. work-item-creator limitado a Subtareas.",
+    "both": "Crea historias Y ejecuta trabajo asignado. Acceso completo a todos los agentes."
+  },
+  "timezone": "America/Bogota",
+  "workHoursPerDay": 8.5,
+  "sprintDays": 10,
+  "mcpMode": "podman",
+  "_mcpModeOptions": ["docker", "podman", "jar", "source"],
+  "mcpJarPath": null,
+  "customContextPath": "config/profiles/<nombre-equipo>/custom-context.md"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Equipo Desarrollo — Ejemplo",
+  "ado": {
+    "organization": "mi-organizacion",
+    "project": "Mi_Proyecto_Dev",
+    "team": "equipo-backend"
+  },
+  "user": {
+    "email": "dev@empresa.com",
+    "displayName": "Nombre Desarrollador"
+  },
+  "userRole": "developer",
+  "timezone": "America/Bogota",
+  "workHoursPerDay": 8,
+  "sprintDays": 14,
+  "mcpMode": "jar",
+  "mcpJarPath": "./bin/mcp-azure-devops.jar",
+  "customContextPath": "config/profiles/dev-team-example/custom-context.md"
+}

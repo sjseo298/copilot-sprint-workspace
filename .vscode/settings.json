@@ -1,0 +1,18 @@
+{
+  "github.copilot.chat.agent.thinkingTool": true,
+  "github.copilot.chat.followUps": "always",
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "files.exclude": {
+    "config/active-profile.json": true,
+    "config/active-workflow.json": true,
+    "tmp/": true,
+    "tools/*.jar": true
+  },
+  "editor.formatOnSave": false,
+  "files.associations": {
+    "restricciones_sprint": "plaintext",
+    "*.agent.md": "markdown",
+    "*.prompt.md": "markdown",
+    "*.instructions.md": "markdown"
+  }
+}

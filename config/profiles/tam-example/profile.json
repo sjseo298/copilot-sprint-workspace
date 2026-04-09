@@ -1,0 +1,19 @@
+{
+  "name": "Architecture Team — Example",
+  "ado": {
+    "organization": "mi-organizacion",
+    "project": "Mi_Proyecto",
+    "team": "mi-equipo-arquitectura"
+  },
+  "user": {
+    "email": "usuario@empresa.com",
+    "displayName": "Tu Nombre"
+  },
+  "userRole": "both",
+  "timezone": "America/Bogota",
+  "workHoursPerDay": 8.5,
+  "sprintDays": 11,
+  "mcpMode": "podman",
+  "mcpJarPath": null,
+  "customContextPath": "config/profiles/tam-example/custom-context.md"
+}
