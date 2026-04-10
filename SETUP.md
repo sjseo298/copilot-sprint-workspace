@@ -62,45 +62,39 @@ Crea un token con permisos:
 - **Work Items**: Read & Write
 - **Code**: Read (si el agente necesita analizar repositorios)
 
-Luego ejecuta:
-```bash
-bash scripts/setup_secrets.sh
-```
-
-Esto guarda las variables en `~/.bashrc`:
-- `AZURE_DEVOPS_PAT`
-- `AZURE_DEVOPS_ORGANIZATION`
-
-Aplica los cambios:
-```bash
-source ~/.bashrc
-```
+> **No necesitas configurar variables de entorno.** La primera vez que VS Code arranque el servidor MCP te pedirá el nombre de la organización y el PAT directamente en la interfaz. Los almacena de forma segura y no vuelve a pedirlos.
 
 ---
 
 ## Paso 4: MCP Server
 
 El MCP Server es el puente entre GitHub Copilot y Azure DevOps.
-Usa `sjseo298/mcp-azure-devops`.
+Usa la imagen `sjseo298/mcp-azure-devops`.
 
-### Opción A: Docker (más simple)
+### Opción A: Docker (por defecto en mcp.json)
 ```bash
 docker pull sjseo298/mcp-azure-devops
 ```
-El `@setup-wizard` configura `.vscode/mcp.json` con el modo `docker`.
+El `mcp.json` ya está configurado con `docker`. No necesitas cambiarlo.
 
-### Opción B: Podman (rootless)
+### Opción B: Podman (rootless, sin licencia)
+Edita `.vscode/mcp.json` y cambia `"command": "docker"` por `"command": "podman"`:
 ```bash
 podman pull sjseo298/mcp-azure-devops
 ```
-Selecciona `podman` en el wizard.
 
-### Opción C: JAR (sin contenedor)
+### Opción C: JAR local (sin contenedor, requiere Java 21+)
 1. Descarga el JAR desde [releases](https://github.com/sjseo298/AzureDevopsCompanionMCP/releases)
 2. Colócalo en `tools/mcp-azure-devops.jar`
-3. Selecciona `jar` en el wizard
+3. En `.vscode/mcp.json` reemplaza el bloque `args` por:
+```json
+"command": "java",
+"args": ["-jar", "${workspaceFolder}/tools/mcp-azure-devops.jar",
+  "--azure.devops.organization=${input:azure_devops_org}",
+  "--azure.devops.pat=${input:azure_devops_pat}"]
+```
 
-Requiere Java 17+: `java -version`
+Verifica Java: `java -version` (21+ recomendado)
 
 ---
 

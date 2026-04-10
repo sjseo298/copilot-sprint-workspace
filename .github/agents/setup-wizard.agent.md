@@ -45,62 +45,54 @@ Solicita o confirma:
 
 Si `config/active-profile.json` ya tiene estos valores, mostrarlos y preguntar si son correctos.
 
-Luego indica al usuario que ejecute:
-```bash
-scripts/setup_secrets.sh
-```
-para configurar el PAT de Azure DevOps.
+Indica al usuario que el PAT **no requiere configuración de variables de entorno**: VS Code lo pedirá automáticamente la primera vez que arranque el servidor MCP gracias al bloque `inputs` en `.vscode/mcp.json`.
 
 ---
 
 ## Etapa 4 — Configuración del MCP Server
 
-Explica brevemente las 3 opciones de despliegue del MCP Server (`sjseo298/mcp-azure-devops`):
+El `mcp.json` ya viene con `docker` por defecto y usa `inputs.promptString` para pedir organización y PAT al usuario. Solo pregunta si quiere cambiar el runtime:
 
-| Opción | Comando | Requisito |
-|--------|---------|-----------|
-| `docker` | `docker run ...` | Docker Desktop |
-| `podman` | `podman run ...` | Podman (rootless) |
-| `jar` | `java -jar ...` | Java 17+ |
+| Opción | Cambio necesario | Requisito |
+|--------|-----------------|-----------|
+| `docker` (default) | Ninguno | Docker Engine |
+| `podman` | Cambiar `"docker"` por `"podman"` en args | Podman |
+| `jar` | Ver Opción C en SETUP.md | Java 21+ |
 
-Pregunta cuál prefiere y genera el bloque correspondiente para `.vscode/mcp.json`:
+Si el usuario elige **docker o podman**, solo actualiza el comando en el args del `mcp.json` existente:
 
-**Docker / Podman:**
 ```json
 {
+  "inputs": [
+    { "id": "azure_devops_org", "type": "promptString", "description": "Azure DevOps organization name (e.g. 'contoso')" },
+    { "id": "azure_devops_pat", "type": "promptString", "description": "Azure DevOps Personal Access Token (PAT)", "password": true }
+  ],
   "servers": {
-    "azure-devops": {
-      "type": "stdio",
+    "azure-devops-mcp": {
       "command": "<docker|podman>",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "AZURE_DEVOPS_ORG",
-        "-e", "AZURE_DEVOPS_PAT",
-        "sjseo298/mcp-azure-devops"
-      ],
-      "env": {
-        "AZURE_DEVOPS_ORG": "${env:AZURE_DEVOPS_ORGANIZATION}",
-        "AZURE_DEVOPS_PAT": "${env:AZURE_DEVOPS_PAT}"
-      }
+      "args": ["run", "--rm", "-i",
+        "--env", "AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
+        "--env", "AZURE_DEVOPS_PAT=${input:azure_devops_pat}",
+        "sjseo298/mcp-azure-devops", "stdio"]
     }
   }
 }
 ```
 
-**JAR (descarga de GitHub Releases):**
+Si el usuario elige **JAR**, genera este bloque:
+
 ```json
 {
+  "inputs": [
+    { "id": "azure_devops_org", "type": "promptString", "description": "Azure DevOps organization name (e.g. 'contoso')" },
+    { "id": "azure_devops_pat", "type": "promptString", "description": "Azure DevOps Personal Access Token (PAT)", "password": true }
+  ],
   "servers": {
-    "azure-devops": {
-      "type": "stdio",
+    "azure-devops-mcp": {
       "command": "java",
-      "args": [
-        "-jar", "${workspaceFolder}/tools/mcp-azure-devops.jar"
-      ],
-      "env": {
-        "AZURE_DEVOPS_ORG": "${env:AZURE_DEVOPS_ORGANIZATION}",
-        "AZURE_DEVOPS_PAT": "${env:AZURE_DEVOPS_PAT}"
-      }
+      "args": ["-jar", "${workspaceFolder}/tools/mcp-azure-devops.jar",
+        "--azure.devops.organization=${input:azure_devops_org}",
+        "--azure.devops.pat=${input:azure_devops_pat}"]
     }
   }
 }
