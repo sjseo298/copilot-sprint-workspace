@@ -72,49 +72,134 @@ Haz estas preguntas en un solo mensaje, de forma conversacional y breve:
 
 Con las respuestas del usuario, investiga sin pausas ni pedidos de confirmación intermedios.
 
-### 3a — Si dio un work item ID
+### 3a — Anclar el alcance al proyecto del work item
 
-Antes de usarlo, aclara:
-> "¿Es un work item asignado a ti, o es de un compañero que me pasaste como ejemplo?"
+**Regla cardinal**: una vez identificado el proyecto desde el work item, **todo lo que sigue ocurre dentro de ese `System.TeamProject`**. Un usuario puede tener work items en múltiples proyectos; el wizard trabaja con uno solo — el del ítem que proporcionó. No cruces a otros proyectos en ninguna consulta.
 
-- **Si es propio**: úsalo directamente para identificar proyecto, equipo e identidad del usuario.
-- **Si es de un compañero**: úsalo para identificar proyecto y equipo, pero anota que la identidad (`AssignedTo`) de ese ítem no corresponde al usuario actual.
+Antes de usar el work item, pregunta en una sola línea:
+> "¿Este work item es tuyo, o lo usas como referencia de un compañero?"
 
-Luego, con el work item:
-- Extrae `System.TeamProject`, `System.AreaPath`, `System.IterationPath`
-- Si tiene padre → sube hasta la raíz (Feature o equivalente)
-- Si tiene hijos → baja un nivel para ver el siguiente tipo
-- Así reconstruyes la jerarquía real: `Feature → Tarea → Subtarea` (o el equivalente del equipo)
+- **Si es propio**: úsalo para identificar proyecto, equipo e identidad (`AssignedTo` = usuario actual).
+- **Si es de un compañero**: úsalo para identificar **proyecto y equipo únicamente**. El `AssignedTo` de ese ítem _no_ es el usuario actual — búscalo después (ver 3b).
 
-### 3b — Si solo dio la organización
+Del work item, extrae:
+- `System.TeamProject` → **proyecto ancla** (todos los pasos siguientes usan este valor)
+- `System.AreaPath`, `System.IterationPath`
+- `System.WorkItemType` → posición en la jerarquía
+- Navega hacia arriba (padres) hasta la raíz y hacia abajo (hijos) para reconstruir la jerarquía completa: `Epic → Feature → Tarea → Subtarea` o lo que corresponda en este equipo
 
-- Lista proyectos → muestra opciones, pide que elija
-- Lista equipos del proyecto elegido → pide que elija
+### 3b — Si el work item es de un compañero: encontrar al usuario dentro del mismo proyecto
 
-### 3c — Investigación profunda (paralela, sin pausas)
+```sql
+SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],[System.AssignedTo]
+FROM workitems
+WHERE [System.TeamProject] = '<proyecto ancla>'
+  AND [System.AssignedTo] = '<email del usuario>'
+ORDER BY [System.ChangedDate] DESC
+```
+- Con resultados → confirma equipo e identidad con sus propios items
+- Sin resultados → el usuario es nuevo en el proyecto; usa el item del compañero solo como referencia estructural
 
-Con proyecto y equipo identificados:
+### 3c — Si solo dio la organización
 
-**Iteraciones:**
-Lee las iteraciones del team → identifica sprint activo, fechas, patrón de naming, duración promedio
+Lista proyectos → muestra opciones, pide que elija → ese proyecto es el ancla.
+Lista equipos del proyecto elegido → pide que elija.
 
-**Work items del sprint activo (WIQL sin campos pesados):**
+### 3d — Investigación exhaustiva (todo en paralelo, sin pausas, dentro del proyecto ancla)
+
+#### I. Todos los tipos de work item activos en el proyecto
+
 ```sql
 SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],
-       [System.AssignedTo],[System.CreatedBy],[System.Tags],[System.IterationPath]
+       [System.AssignedTo],[System.CreatedBy],[System.Tags],
+       [System.IterationPath],[System.AreaPath],
+       [Microsoft.VSTS.Scheduling.RemainingWork],
+       [Microsoft.VSTS.Scheduling.StartDate]
 FROM workitems
-WHERE [System.TeamProject] = @project
-  AND [System.IterationPath] = @CurrentIteration
-ORDER BY [System.WorkItemType]
+WHERE [System.TeamProject] = '<proyecto ancla>'
+  AND [System.IterationPath] UNDER '<iteración actual>'
+ORDER BY [System.WorkItemType],[System.AssignedTo]
 ```
-→ Detecta tipos en uso, estados reales, tags frecuentes, patrón de asignaciones
 
-**Campos custom (por tipo):**
-Para cada tipo encontrado, consulta sus campos incluyendo picklists:
-→ Resuelve GUIDs (`Custom.c12a8be8-...` → nombre UI + valores + si es lista cerrada)
+De esta consulta extrae:
+- Lista completa de **tipos usados** en el equipo (no asumas que solo existen Feature/Tarea/Subtarea)
+- Quién crea cada tipo (`CreatedBy`) y quién los ejecuta (`AssignedTo`) → sirve para inferir el rol del usuario
+- Tags frecuentes y sus patrones de nomenclatura
+- Qué otros campos tienen valores (pista sobre qué se usa en la práctica)
 
-**Lectura profunda de 1-2 work items con hijos (raw: true):**
-→ Confirma jerarquía, detecta uso real de HTML vs Markdown, campos que en la práctica siempre se llenan
+#### II. Catálogo completo de campos por cada tipo encontrado
+
+Para **cada tipo** identificado en el paso anterior, ejecuta:
+```
+GET {org}/{project}/_apis/wit/workitemtypes/{type}/fields?$expand=all
+```
+
+Captura y documenta cada campo:
+- `referenceName` — identificador técnico para WIQL y API
+- `name` — nombre visible en la UI de Azure DevOps
+- `type` — tipo de dato (`string`, `integer`, `dateTime`, `picklistString`, `picklistInteger`, `boolean`, `html`, `identity`, etc.)
+- `required` / `alwaysRequired`
+- `readOnly`
+- `defaultValue`
+- Para `picklistString` / `picklistInteger`: lista completa de valores y si es lista cerrada (solo esos valores) o abierta
+
+**Resuelve GUIDs crípticos**: `Custom.c12a8be8-...` → obtén el nombre UI real. Si el nombre UI sigue sin ser claro, el propósito se infiere en el paso siguiente con los work items reales.
+
+#### III. Leer work items exitosos para entender el propósito real de cada campo
+
+Consulta work items cerrados exitosamente (últimos 60 días, distintos tipos):
+```sql
+SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],[System.AssignedTo]
+FROM workitems
+WHERE [System.TeamProject] = '<proyecto ancla>'
+  AND [System.State] IN ('Cerrado', 'Done', 'Closed', 'Completed')
+  AND [System.ChangedDate] >= @Today - 60
+ORDER BY [System.ChangedDate] DESC
+```
+
+Elige 2-3 de distintos tipos y léelos con `raw: true`. De cada uno extrae:
+- Qué campos tienen valor real (vs. los que siempre están vacíos → son opcionales en la práctica)
+- Valores típicos de campos custom (`Custom.Prioridad = 1`, `Custom.EstimacionInicial = 3`, etc.) → confirma el significado semántico del campo
+- Formato de Descripción y Criterios de Aceptación: ¿HTML o texto plano? ¿extensión típica?
+- Convenciones de títulos: verbos, prefijos, longitud
+- Comentarios de cierre: ¿existen? ¿en qué formato?
+
+Con esta información completa el campo **"Para qué sirve"** de cada campo en el catálogo.
+
+#### IV. Work items de compañeros para descubrir tipos adicionales
+
+```sql
+SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],
+       [System.AssignedTo],[System.CreatedBy]
+FROM workitems
+WHERE [System.TeamProject] = '<proyecto ancla>'
+  AND [System.AssignedTo] <> '<email del usuario>'
+  AND [System.IterationPath] UNDER '<iteración actual>'
+ORDER BY [System.WorkItemType],[System.AssignedTo]
+```
+
+Puede revelar tipos que el usuario actual nunca crea pero que existen (ej. Bug, Test Case, Incidente). Para cada tipo nuevo encontrado, aplica el mismo catálogo de campos del paso II.
+
+#### V. Iteraciones del equipo
+
+Lee todas las iteraciones del team → sprint activo, fechas, patrón de naming, duración promedio en días hábiles.
+
+#### VI. Construir el field-catalog completo
+
+Para cada tipo de work item encontrado (incluyendo los de compañeros), genera una tabla con **todos** los campos documentados:
+
+| Campo (`referenceName`) | Nombre UI | Tipo | Obligatorio | Lista cerrada | Valores | Para qué sirve |
+|---|---|---|---|---|---|---|
+| `System.Title` | Título | Texto | ✅ | No | Libre | Nombre corto y descriptivo del ítem |
+| `System.Description` | Descripción | HTML | ✅ | No | Libre | Contexto, objetivo y detalles técnicos |
+| `Microsoft.VSTS.Common.AcceptanceCriteria` | Criterios de Aceptación | HTML | ✅ | No | Libre | Condiciones verificables para considerar el ítem completo — se observó que el equipo las escribe como lista `<ul>` en HTML |
+| `System.AssignedTo` | Asignado a | Identidad | ✅ | No | Usuarios del proyecto | Responsable de ejecutar el trabajo |
+| `Custom.Prioridad` | Prioridad | Entero | ✅ | ✅ `[1, 2]` | 1=semana 1, 2=semana 2 | Prioridad dentro del sprint; se observó que el equipo prioriza por semana |
+| `Custom.c12a8be8-...` | Estimación Inicial | Entero | ✅ | ✅ `[1,2,3,5,8]` | Fibonacci | Esfuerzo estimado en puntos al inicio — se observó que nunca se modifica una vez creado |
+| `Microsoft.VSTS.Scheduling.RemainingWork` | Horas Restantes | Decimal | ✅ | No | Número | Horas de trabajo que faltan para completar la subtarea |
+| `Microsoft.VSTS.Common.Activity` | Actividad | Texto | ✅ | ✅ | Development / Analysis / Design / Testing / Documentation | Categoría del tipo de trabajo; se observó que Development es el valor más frecuente |
+
+> La columna **"Para qué sirve"** combina: nombre UI + valores típicos observados en work items reales + documentación estándar de Azure DevOps para campos `Microsoft.VSTS.*`. En campos con GUIDs opacos, los valores reales de los items cerrados son la principal fuente.
 
 ---
 
@@ -169,11 +254,42 @@ Una vez confirmado:
 1. Pide el nombre del perfil:
    > "¿Cómo quieres llamar a este perfil? (ej. `backend`, `mi-equipo`, `squad-pagos`)"
 
-2. Genera y escribe:
+2. Genera y escribe los archivos del perfil. Reglas específicas por archivo:
+
+   **`field-catalog.md`**: Incluye **todos** los tipos de work item encontrados (incluyendo los de compañeros), con todos sus campos documentados según el esquema de la tabla del paso 3d-VI. No omitas ningún tipo ni campo.
+
+   **`custom-context.md`**: Este archivo se genera **desde cero** basándose **exclusivamente** en lo observado en el proyecto durante la investigación + lo que el usuario dijo en la pregunta 4. **No uses ningún ejemplo del workspace como plantilla** — cada proyecto es diferente. Estructura mínima:
+
+   ```markdown
+   # Contexto del equipo — [nombre del equipo/proyecto]
+
+   > Generado por @setup-wizard el [fecha]. Edítalo libremente.
+   > Los agentes leen este archivo antes de crear o gestionar work items.
+
+   ## Rol del equipo
+   [Qué hace este equipo según lo observado y lo que el usuario describió. Si el usuario no lo aclaró, describe solo lo inferido de los datos ADO.]
+
+   ## Jerarquía de trabajo
+   [Jerarquía observada — ej: Epic → User Story → Task, o Feature → Tarea → Subtarea. Solo lo que existe en ADO.]
+
+   ## Sprint
+   [Duración observada, fechas del activo, patrón de nombres. Solo datos factuales.]
+
+   ## Convenciones observadas
+   [Tags frecuentes y su patrón, convenciones en títulos de work items, formato de descripción/AC (HTML o texto), si los comentarios de cierre son habituales.]
+
+   ## Contexto adicional del equipo
+   [Lo que el usuario describió en la pregunta 4. Si no respondió nada, escribe: "Sin contexto adicional proporcionado."]
+   ```
+
+   Lo que **no va** en este archivo:
+   - Reglas prescriptivas que no observaste en los datos (no inventes que "las evidencias son obligatorias" si no lo viste)
+   - Detalles de implementación específicos de un solo proyecto
+   - Suposiciones sobre metodología que el usuario no confirmó
+
+   **Los demás archivos:**
    - `config/profiles/<nombre>/profile.json`
    - `config/profiles/<nombre>/workflow.json`
-   - `config/profiles/<nombre>/field-catalog.md`
-   - `config/profiles/<nombre>/custom-context.md` (con lo del paso 2 punto 4 + lo inferido)
    - `config/active-profile.json` y `config/active-workflow.json`
 
 3. Genera `restricciones_sprint` y `README_sprint_<nombre>.md` con las fechas detectadas.

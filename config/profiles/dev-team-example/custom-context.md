@@ -1,21 +1,33 @@
-# Contexto del Equipo — Equipo Desarrollo (Ejemplo)
+# Contexto del equipo — squad-backend (ejemplo)
 
-> Este archivo lo genera el `@setup-wizard`. Edítalo libremente.
+> Generado por @setup-wizard. Edítalo libremente.
+> Los agentes leen este archivo antes de crear o gestionar work items.
+>
+> **Nota**: Este es un archivo de ejemplo. El tuyo se genera automáticamente
+> a partir de lo que el wizard observa en tu proyecto ADO real.
 
 ## Rol del equipo
 
-Equipo de desarrollo de backend que implementa APIs y servicios. El usuario tiene rol `developer`: solo trabaja los work items que le están asignados, no crea Epics ni User Stories.
+Sin contexto adicional proporcionado por el usuario al momento de la configuración.
 
-## Metodología
+*Información inferida de ADO*: El usuario tiene rol `developer` — solo trabaja los work items que le están asignados. Las User Stories son creadas por el Product Owner.
 
-Sprints de 2 semanas (14 días). Jerarquía: **Epic → User Story → Task**.
-El Product Owner crea las User Stories; los desarrolladores crean y gestionan sus Tasks.
+## Jerarquía de trabajo
 
-## Convenciones
+Observada en el proyecto: **Epic → User Story → Task**
 
-- **Títulos de Task**: acción concreta en inglés o español (ej. "Implementar endpoint POST /pagos")
-- No hay tags obligatorios, el equipo usa etiquetas libres por área (ej. `backend`, `api`, `hotfix`)
+## Sprint
 
-## Evidencias
+Duración observada: ~14 días hábiles (2 semanas).
+Patrón de nombres: `Sprint YYYY.NN` (año + número secuencial).
 
-No son obligatorias para cerrar tareas. Se adjuntan solo cuando el PO lo solicita explícitamente.
+## Convenciones observadas
+
+- Sin tags obligatorios; el equipo usa etiquetas libres (`backend`, `api`, `hotfix`)
+- Títulos de Task: acción concreta (ej. "Implementar endpoint POST /pagos", "Migrar esquema DB")
+- Descripción: texto plano o Markdown simple
+- Criterios de aceptación: texto plano, sin formato HTML
+
+## Contexto adicional del equipo
+
+Sin contexto adicional proporcionado.

@@ -1,48 +1,35 @@
-# Contexto del Equipo — Ejemplo (Arquitectura)
+# Contexto del equipo — equipo-plataforma (ejemplo)
 
-> Este archivo lo genera el `@setup-wizard` a partir de lo que observa en tu proyecto ADO y lo que tú le describes.
-> Edítalo libremente. Los agentes lo leen antes de cada operación para entender cómo trabaja tu equipo.
+> Generado por @setup-wizard. Edítalo libremente.
+> Los agentes leen este archivo antes de crear o gestionar work items.
+>
+> **Nota**: Este es un archivo de ejemplo. El tuyo se genera automáticamente
+> a partir de lo que el wizard observa en tu proyecto ADO real.
 
 ## Rol del equipo
 
-Este perfil de ejemplo corresponde a un equipo de arquitectura de software que:
-- Define estándares técnicos y patrones de diseño para los equipos de desarrollo
-- Evalúa y aprueba decisiones arquitectónicas de alto impacto
-- Acompaña a los equipos en la adopción de nuevas tecnologías
+Sin contexto adicional proporcionado por el usuario al momento de la configuración.
 
-## Metodología
+*Información inferida de ADO*: El equipo crea Features como nivel superior de planificación y ejecuta Tareas y Subtareas dentro de cada sprint. El usuario tiene rol `both` (crea y ejecuta work items).
 
-El equipo usa un framework de sprints de ~11 días hábiles.
-La jerarquía de trabajo es: **Feature → Tarea → Subtarea**.
-El usuario tiene rol `both`: crea las historias y también las ejecuta.
+## Jerarquía de trabajo
 
-Las Features representan iniciativas o entregables completos de un quarter.
-Las Tareas descomponen la Feature en unidades ejecutables (típicamente 1–3 días).
-Las Subtareas son unidades atómicas de trabajo (típicamente 2–8 horas).
+Observada en el proyecto: **Feature → Tarea → Subtarea**
 
-## Convenciones de nomenclatura
+## Sprint
 
-- **Tags opcionales**: nombre del equipo + trimestre en formato `T{Q}-{YEAR}` (ej. `T2-2026`)
-- **Títulos de Feature**: descriptivos, sin prefijos forzados
-- **Títulos de Tarea/Subtarea**: verbo en infinitivo + objeto (ej. "Configurar proxy Apigee", "Validar autenticación OAuth")
+Duración observada: ~10 días hábiles.
+Sprint activo al momento de la configuración: Sprint 12 (2026-04-07 → 2026-04-22).
+Patrón de nombres: `Sprint N` (sin formato de quarter).
 
-## Criterios de aceptación
+## Convenciones observadas
 
-Se escriben en HTML con lista `<ul><li>✅ criterio</li></ul>`.
-Cada criterio debe ser verificable y objetivo.
-No se aceptan criterios vagos como "funciona correctamente" sin métricas.
+- Tags frecuentes: `backend`, `T2-2026` — sin prefijo forzado
+- Títulos de Tarea: verbo en infinitivo + objeto (ej. "Configurar autenticación", "Validar integración")
+- Descripción: en HTML
+- Criterios de aceptación: en HTML, formato lista
+- Comentarios al cerrar: presentes en la mayoría de items cerrados revisados
 
-## Evidencias
+## Contexto adicional del equipo
 
-Toda Subtarea cerrada requiere evidencia adjuntada al work item en ADO.
-La evidencia se genera como archivo `*_evidencia.md` en la carpeta local de la tarea.
-El script `attach-evidence.sh` convierte el archivo a base64 y lo adjunta via MCP.
-
-## Priorización
-
-- **Prioridad 1**: Bloqueantes o compromisos de sprint inamovibles
-- **Prioridad 2**: Valor alto, ejecutar cuando no hay prioridad 1 pendiente
-
-## Impedimentos
-
-Cuando una Tarea está en estado "Impedimento", se documenta en la descripción el bloqueante específico y el equipo responsable de desbloquearlo. No se cierra la tarea hasta resolver el impedimento.
+Sin contexto adicional proporcionado.
