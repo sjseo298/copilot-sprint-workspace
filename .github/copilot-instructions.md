@@ -6,8 +6,9 @@ Si `config/active-profile.json` **no existe**, este workspace NO está configura
 Antes de cualquier otra acción, indica al usuario:
 
 > "Este workspace no está configurado todavía. Usa el agente **@setup-wizard** para
-> conectar tu proyecto de Azure DevOps y crear tu perfil de equipo.
-> Solo toma unos minutos y lo configura todo automáticamente."
+> conectar con Azure DevOps. Solo necesitas un work item de ejemplo o el nombre de tu
+> organización — el wizard descubre el resto automáticamente (proyecto, equipo, campos,
+> sprint activo, rol). Solo confirmas lo que encontró."
 
 ## Uso diario — una vez configurado
 
