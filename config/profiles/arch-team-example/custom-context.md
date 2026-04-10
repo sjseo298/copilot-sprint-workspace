@@ -1,14 +1,14 @@
-# Contexto del Equipo — Ejemplo
+# Contexto del Equipo — Ejemplo (Arquitectura)
 
 > Este archivo lo genera el `@setup-wizard` a partir de lo que observa en tu proyecto ADO y lo que tú le describes.
 > Edítalo libremente. Los agentes lo leen antes de cada operación para entender cómo trabaja tu equipo.
 
 ## Rol del equipo
 
-Este perfil de ejemplo corresponde a un equipo de arquitectura técnica que:
-- Define y gobierna estándares de integración en la organización
-- Lidera la adopción de nuevas tecnologías (IA, automatización, APIs)
-- Trabaja con autonomía técnica y reporte directo a la gerencia de tecnología
+Este perfil de ejemplo corresponde a un equipo de arquitectura de software que:
+- Define estándares técnicos y patrones de diseño para los equipos de desarrollo
+- Evalúa y aprueba decisiones arquitectónicas de alto impacto
+- Acompaña a los equipos en la adopción de nuevas tecnologías
 
 ## Metodología
 
@@ -22,7 +22,7 @@ Las Subtareas son unidades atómicas de trabajo (típicamente 2–8 horas).
 
 ## Convenciones de nomenclatura
 
-- **Tags obligatorios**: `[ARQ] Automatización Arquitectura` + `T{Q}-{YEAR}` (ej. `T1-2026`)
+- **Tags opcionales**: nombre del equipo + trimestre en formato `T{Q}-{YEAR}` (ej. `T2-2026`)
 - **Títulos de Feature**: descriptivos, sin prefijos forzados
 - **Títulos de Tarea/Subtarea**: verbo en infinitivo + objeto (ej. "Configurar proxy Apigee", "Validar autenticación OAuth")
 

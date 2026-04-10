@@ -11,7 +11,7 @@
 | `Microsoft.VSTS.Common.AcceptanceCriteria` | Criterios de Aceptación | HTML | ✅ | Libre |
 | `System.AreaPath` | Área | Ruta | ✅ | Definido por proyecto ADO |
 | `System.IterationPath` | Iteración | Ruta | ✅ | Definido por proyecto ADO |
-| `System.Tags` | Etiquetas | Texto | ✅ | Libre (por convención: `[ARQ] Automatización; T1-2026`) |
+| `System.Tags` | Etiquetas | Texto | ✅ | Libre (por convención: nombre del equipo + trimestre, ej. `arquitectura; T2-2026`) |
 | `Microsoft.VSTS.Scheduling.Effort` | Esfuerzo | Decimal | ✅ | Número positivo |
 
 ## Tarea

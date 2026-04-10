@@ -15,5 +15,5 @@
   "sprintDays": 11,
   "mcpMode": "podman",
   "mcpJarPath": null,
-  "customContextPath": "config/profiles/tam-example/custom-context.md"
+  "customContextPath": "config/profiles/arch-team-example/custom-context.md"
 }

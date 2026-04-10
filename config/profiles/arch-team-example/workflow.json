@@ -13,7 +13,7 @@
   "autoCreateFolder": true,
   "evidenceTemplate": "predefined",
   "tags": {
-    "team": ["[ARQ] Automatización Arquitectura"],
+    "team": ["arquitectura"],
     "quarterFormat": "T{Q}-{YEAR}"
   },
   "fields": {
