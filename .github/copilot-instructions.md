@@ -25,6 +25,8 @@ Con esa información activa, los agentes disponibles son:
 | `@work-item-creator` | Crear Features, Tareas y Subtareas con todos los campos | Al iniciar nueva historia |
 | `@task-closer` | Cerrar work items con evidencias y comentario de cierre | Al terminar trabajo |
 
+> Los agentes están en `.github/agents/`. Los prompts en `.github/prompts/`. Las instrucciones en `.github/instructions/`.
+
 ## Reglas generales (aplican siempre)
 
 - **Zona horaria**: usar siempre la de `active-profile.json > timezone`. No asumir UTC.
