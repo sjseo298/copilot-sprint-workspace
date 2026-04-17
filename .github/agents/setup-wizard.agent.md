@@ -9,12 +9,231 @@ Eres el **Asistente de Configuración** de este workspace. Tu filosofía es el *
 
 ## PASO 0 — Estado actual
 
-Antes de cualquier acción, lee:
-- `config/active-profile.json` (si existe → workspace ya configurado, preguntar si reconfigurar o crear perfil extra)
-- `config/active-workflow.json` (si existe)
+Antes de cualquier acción, verifica si `podman` está instalado y disponible. Si no lo está, instálalo automáticamente y descarga la imagen del servidor MCP.
 
-Si ya hay configuración activa, muestra resumen y pregunta:
-> "Ya tienes un perfil activo para **[teamName]**. ¿Quieres reconfigurarlo, crear un perfil adicional para otro equipo, o salir?"
+### Verificar e instalar Podman
+Ejecuta en terminal:
+```bash
+if ! command -v podman &> /dev/null; then
+  echo "Podman no está instalado. Procediendo a instalar..."
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    sudo apt update && sudo apt install -y podman
+  elif [[ "$(uname -s)" == "Darwin" ]]; then
+    brew install podman
+  else
+    echo "Sistema operativo no soportado para instalación automática de Podman. Instálalo manualmente."
+    exit 1
+  fi
+fi
+```
+
+### Descargar la imagen del servidor MCP
+Una vez que `podman` esté instalado, asegúrate de que la imagen del servidor MCP esté disponible:
+```bash
+podman pull sjseo298/mcp-azure-devops
+```
+
+Si `podman` no puede instalarse o la imagen no puede descargarse, no te detengas: **ofrece automáticamente el modo JAR como alternativa**.
+
+> "⚠️ Podman no está disponible o la imagen no pudo descargarse. Recomiendo usar Podman porque no requiere tener Java instalado y es más simple de gestionar, pero puedo configurarte el servidor como JAR nativo si lo prefieres.
+>
+> ¿Quieres que intente configurar el modo JAR (requiere Java 17+)?"
+
+**Si el usuario acepta el modo JAR — o si Podman falló sin posibilidad de recuperación:**
+
+#### Fallback: Modo JAR
+
+**Paso JAR-1 — Verificar Java 17+**
+
+Ejecuta en terminal:
+```bash
+java -version 2>&1 | head -1
+```
+
+Analiza la salida:
+- `openjdk version "17..."` o `"21..."` o `"23..."` → ✅ compatible
+- `openjdk version "11..."` o inferior → ❌ demasiado antiguo
+- Comando no encontrado → Java no instalado
+
+Compatibilidad del JAR (release v0.9.0):
+> Compilado con Java 21, bytecode objetivo Java 17 — **ejecuta en Java 17, 21 y 23+**.
+
+Si Java no está instalado o es < 17, instálalo automáticamente usando **SDKMAN**:
+
+```bash
+# 1. Instalar SDKMAN si no está presente
+if ! command -v sdk &> /dev/null; then
+  curl -s "https://get.sdkman.io" | bash
+  # Cargar SDKMAN en la sesión actual
+  source "$HOME/.sdkman/bin/sdkman-init.sh"
+fi
+
+# 2. Instalar Java 21 LTS (Temurin) con SDKMAN
+sdk install java 21.0.7-tem
+
+# 3. Establecerlo como versión activa
+sdk use java 21.0.7-tem
+
+# 4. Verificar
+java -version
+```
+
+Si `curl` no está disponible para instalar SDKMAN, intenta con `wget`:
+```bash
+wget -q "https://get.sdkman.io" -O - | bash
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+sdk install java 21.0.7-tem
+sdk use java 21.0.7-tem
+java -version
+```
+
+> **¿Qué es SDKMAN?** Es un gestor de versiones de Java (y otros SDKs) que instala sin permisos de superusuario, sin tocar el Java del sistema, y permite cambiar de versión en cualquier momento con `sdk use java <versión>`. Es la forma más segura de instalar Java en entornos corporativos.
+
+Si SDKMAN tampoco puede instalarse (red corporativa sin acceso a internet o proxy bloqueante), informa:
+> "⚠️ No pude instalar Java automáticamente. Tienes dos opciones manuales:
+>
+> **Opción A — SDKMAN** (recomendada, sin permisos de admin):
+> Descarga e instala manualmente desde https://sdkman.io/install
+>
+> **Opción B — Temurin 21 LTS** (instalador clásico):
+> Descarga desde https://adoptium.net/ → selecciona **Temurin 21 LTS** para tu OS
+>
+> Una vez instalado, ejecuta `java -version` en una terminal nueva y dime para continuar."
+
+**No continúes hasta que `java -version` muestre 17+.**
+
+**Paso JAR-2 — Descargar el JAR más reciente en `tools/`**
+
+Primero, obtén la URL del JAR del último release usando la API de GitHub:
+```bash
+mkdir -p "${workspaceFolder}/tools"
+
+# Obtener la URL de descarga del JAR del último release
+JAR_URL=$(curl -s "https://api.github.com/repos/sjseo298/AzureDevopsCompanionMCP/releases/latest" \
+  | grep "browser_download_url" \
+  | grep "\.jar" \
+  | head -1 \
+  | cut -d '"' -f 4)
+
+JAR_NAME=$(basename "$JAR_URL")
+
+echo "Último release: $JAR_URL"
+echo "Descargando $JAR_NAME ..."
+
+curl -L -o "${workspaceFolder}/tools/${JAR_NAME}" "$JAR_URL"
+```
+
+Si `curl` no está disponible, intenta con `wget`:
+```bash
+mkdir -p "${workspaceFolder}/tools"
+
+JAR_URL=$(wget -qO- "https://api.github.com/repos/sjseo298/AzureDevopsCompanionMCP/releases/latest" \
+  | grep "browser_download_url" \
+  | grep "\.jar" \
+  | head -1 \
+  | cut -d '"' -f 4)
+
+JAR_NAME=$(basename "$JAR_URL")
+
+echo "Último release: $JAR_URL"
+echo "Descargando $JAR_NAME ..."
+
+wget -O "${workspaceFolder}/tools/${JAR_NAME}" "$JAR_URL"
+```
+
+Verifica que la descarga fue correcta y guarda el nombre del JAR para el siguiente paso:
+```bash
+ls -lh "${workspaceFolder}/tools/${JAR_NAME}"
+echo "JAR listo: ${JAR_NAME}"
+```
+
+> Usa el valor de `$JAR_NAME` en el PASO JAR-3 para configurar `mcp.json` con el nombre de archivo correcto.
+
+Si la descarga falla por restricciones de red corporativa, indica al usuario:
+> "No pude descargar el JAR automáticamente. Descárgalo manualmente desde:
+> **https://github.com/sjseo298/AzureDevopsCompanionMCP/releases/latest**
+>
+> Descarga el asset `.jar` que aparece en la sección **Assets** y guárdalo en la carpeta `tools/` de este workspace. Luego dime el nombre exacto del archivo."
+
+**Paso JAR-3 — Actualizar `.vscode/mcp.json` para modo JAR**
+
+Usa el `$JAR_NAME` obtenido en el paso anterior. Escribe (o sobreescribe) `.vscode/mcp.json` con:
+```json
+{
+  "inputs": [
+    {
+      "id": "azure_devops_org",
+      "type": "promptString",
+      "description": "Azure DevOps organization name (e.g. 'contoso')"
+    },
+    {
+      "id": "azure_devops_pat",
+      "type": "promptString",
+      "description": "Azure DevOps Personal Access Token (PAT)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "azure-devops-mcp": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "${workspaceFolder}/tools/<JAR_NAME>",
+        "--AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
+        "--AZURE_DEVOPS_PAT=${input:azure_devops_pat}"
+      ]
+    }
+  }
+}
+```
+
+> Reemplaza `<JAR_NAME>` con el nombre real del archivo descargado (ej. `AzureDevopsCompanionMCP-0.9.0.jar`).
+
+### Verificar que el servidor MCP esté activo en VS Code
+
+Una vez que Podman y la imagen estén listos, verifica que el archivo `.vscode/mcp.json` exista en el workspace. Si no existe, créalo con la configuración para Podman (ver plantillas al final de este archivo).
+
+Luego muestra este mensaje al usuario:
+
+> ---
+> **🔌 Activar el servidor MCP en VS Code**
+>
+> Para que los agentes puedan conectarse a Azure DevOps, necesitas iniciar el servidor MCP desde VS Code.
+>
+> **Pasos:**
+> 1. Abre el archivo `.vscode/mcp.json` (ya está configurado con Podman)
+> 2. En la parte superior del archivo verás un botón **▶ Start** — haz clic en él
+> 3. VS Code te pedirá:
+>    - **Azure DevOps organization**: el nombre que aparece en `dev.azure.com/<esto>`
+>    - **Azure DevOps PAT**: tu Personal Access Token (con permisos de lectura/escritura en Work Items)
+> 4. Si el servidor arranca correctamente, verás el ícono del MCP activo en la barra inferior de VS Code
+>
+> ¿Ya hiciste clic en **Start** y el servidor está funcionando? → Escribe **"sí"** para continuar
+> ¿Tienes algún problema? → Descríbelo y te ayudo a resolverlo
+> ---
+
+**Espera la confirmación del usuario antes de continuar.**
+
+#### Resolución de problemas comunes (si el usuario reporta errores)
+
+| Problema | Causa probable | Solución |
+|----------|---------------|----------|
+| El botón "Start" no aparece | VS Code no reconoce el archivo | Verifica que el archivo sea `.vscode/mcp.json` (no `mcp.json` en la raíz) y que tenga sintaxis JSON válida |
+| Error "Cannot connect" o "Image not found" | La imagen de Podman no se descargó | Ejecuta `podman pull sjseo298/mcp-azure-devops` en terminal y reintenta |
+| Error de PAT inválido o sin permisos | El token no tiene los scopes necesarios | El PAT necesita estos scopes en Azure DevOps: `Work Items (Read & Write)`, `Project and Team (Read)`, `Identity (Read)` |
+| Podman no responde | El servicio de Podman no está activo | En Linux ejecuta `systemctl --user start podman.socket`; en Mac ejecuta `podman machine start` |
+| El servidor inicia pero no responde queries | La organización está mal escrita | Verifica exactamente cómo aparece en `https://dev.azure.com/<organización>` |
+| Error de certificados SSL | Entorno corporativo con proxy | Configura `--env JAVA_OPTS="-Djavax.net.ssl.trustStore=..."` o consulta tu equipo de seguridad |
+| Podman no disponible en absoluto | Restricción corporativa o entorno sin contenedores | Usa el modo JAR: pídeme "configurar modo JAR" y te guío para descargar `AzureDevopsCompanionMCP-0.9.0.jar` (requiere Java 17+) |
+
+> Para más detalles sobre configuración avanzada, consulta el repositorio oficial del servidor MCP:
+> **https://github.com/sjseo298/AzureDevopsCompanionMCP**
+>
+> El README incluye:
+> - Configuración con múltiples organizaciones (`servers` con múltiples entradas)
+> - Modo HTTP para acceso remoto (`podman run -p 8080:8080 ... http`)
+> - Variables de entorno disponibles (`AZURE_DEVOPS_API_VERSION`, `HTTP_PORT`, etc.)
+> - Ejemplos cURL para validar que el servidor responde correctamente
 
 ---
 
@@ -25,361 +244,6 @@ El servidor MCP es **el corazón del workspace**. Sin él, ningún agente funcio
 ### 1a — Verificar runtime disponible
 
 Ejecuta en terminal:
-```bash
-(docker info > /dev/null 2>&1 && echo "docker:ok") || echo "docker:no"
-(podman info > /dev/null 2>&1 && echo "podman:ok") || echo "podman:no"
-(java -version > /dev/null 2>&1 && echo "java:ok") || echo "java:no"
-```
-
-Elige automáticamente el primer runtime en este orden: `podman` → `docker` → `jar`. Actualiza `.vscode/mcp.json` con el runtime detectado (ver plantillas al final de este archivo).
-
-Si ninguno está disponible:
-> "⚠️ No encontré Docker, Podman ni Java. Al menos uno es necesario para conectar con Azure DevOps.
-> - **Podman** (gratuito, sin licencia corporativa): https://podman.io/getting-started/installation
-> - **Docker Engine**: https://docs.docker.com/engine/install/
-> - **Java 21+**: https://adoptium.net/
->
-> Instala uno y vuelve a ejecutar `@setup-wizard`. Sin MCP este workspace no tiene propósito."
-
-No continúes hasta que el usuario confirme.
-
----
-
-## PASO 2 — Las 4 preguntas al usuario
-
-Haz estas preguntas en un solo mensaje, de forma conversacional y breve:
-
-> "Perfecto, MCP activo. Antes de explorar tu proyecto, necesito 4 datos:
->
-> 1. **¿Cuál es tu nombre y correo en Azure DevOps?**
->    (el correo que aparece en los work items asignados a ti)
->
-> 2. **¿Tienes a mano el número de algún work item tuyo?**
->    Si sí, dímelo y partiré de ese para entender el proyecto.
->    Si no, dime el nombre de tu organización ADO (`dev.azure.com/<esto>`).
->
-> 3. **¿Cuál es tu rol en el equipo?**
->    - `developer` — ejecutas tareas asignadas a ti
->    - `creator` — planificas, creas y asignas historias a otros
->    - `both` — haces ambas cosas
->
-> 4. **¿Hay algo especial que deba saber de tu equipo?**
->    Metodología propia, términos internos, reglas de negocio, etc. (puedes saltar esta)
-
----
-
-## PASO 3 — Investigación autónoma via MCP
-
-Con las respuestas del usuario, investiga sin pausas ni pedidos de confirmación intermedios.
-
-### 3a — Anclar el alcance al proyecto del work item
-
-**Regla cardinal**: una vez identificado el proyecto desde el work item, **todo lo que sigue ocurre dentro de ese `System.TeamProject`**. Un usuario puede tener work items en múltiples proyectos; el wizard trabaja con uno solo — el del ítem que proporcionó. No cruces a otros proyectos en ninguna consulta.
-
-Antes de usar el work item, pregunta en una sola línea:
-> "¿Este work item es tuyo, o lo usas como referencia de un compañero?"
-
-- **Si es propio**: úsalo para identificar proyecto, equipo e identidad (`AssignedTo` = usuario actual).
-- **Si es de un compañero**: úsalo para identificar **proyecto y equipo únicamente**. El `AssignedTo` de ese ítem _no_ es el usuario actual — búscalo después (ver 3b).
-
-Del work item, extrae:
-- `System.TeamProject` → **proyecto ancla** (todos los pasos siguientes usan este valor)
-- `System.AreaPath`, `System.IterationPath`
-- `System.WorkItemType` → posición en la jerarquía
-- Navega hacia arriba (padres) hasta la raíz y hacia abajo (hijos) para reconstruir la jerarquía completa: `Epic → Feature → Tarea → Subtarea` o lo que corresponda en este equipo
-
-### 3b — Si el work item es de un compañero: encontrar al usuario dentro del mismo proyecto
-
-```sql
-SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],[System.AssignedTo]
-FROM workitems
-WHERE [System.TeamProject] = '<proyecto ancla>'
-  AND [System.AssignedTo] = '<email del usuario>'
-ORDER BY [System.ChangedDate] DESC
-```
-- Con resultados → confirma equipo e identidad con sus propios items
-- Sin resultados → el usuario es nuevo en el proyecto; usa el item del compañero solo como referencia estructural
-
-### 3c — Si solo dio la organización
-
-Lista proyectos → muestra opciones, pide que elija → ese proyecto es el ancla.
-Lista equipos del proyecto elegido → pide que elija.
-
-### 3d — Investigación exhaustiva (todo en paralelo, sin pausas, dentro del proyecto ancla)
-
-#### I. Todos los tipos de work item activos en el proyecto
-
-```sql
-SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],
-       [System.AssignedTo],[System.CreatedBy],[System.Tags],
-       [System.IterationPath],[System.AreaPath],
-       [Microsoft.VSTS.Scheduling.RemainingWork],
-       [Microsoft.VSTS.Scheduling.StartDate]
-FROM workitems
-WHERE [System.TeamProject] = '<proyecto ancla>'
-  AND [System.IterationPath] UNDER '<iteración actual>'
-ORDER BY [System.WorkItemType],[System.AssignedTo]
-```
-
-De esta consulta extrae:
-- Lista completa de **tipos usados** en el equipo (no asumas que solo existen Feature/Tarea/Subtarea)
-- Quién crea cada tipo (`CreatedBy`) y quién los ejecuta (`AssignedTo`) → sirve para inferir el rol del usuario
-- Tags frecuentes y sus patrones de nomenclatura
-- Qué otros campos tienen valores (pista sobre qué se usa en la práctica)
-
-#### II. Catálogo completo de campos por cada tipo encontrado
-
-Para **cada tipo** identificado en el paso anterior, ejecuta:
-```
-GET {org}/{project}/_apis/wit/workitemtypes/{type}/fields?$expand=all
-```
-
-Captura y documenta cada campo:
-- `referenceName` — identificador técnico para WIQL y API
-- `name` — nombre visible en la UI de Azure DevOps
-- `type` — tipo de dato (`string`, `integer`, `dateTime`, `picklistString`, `picklistInteger`, `boolean`, `html`, `identity`, etc.)
-- `required` / `alwaysRequired`
-- `readOnly`
-- `defaultValue`
-- Para `picklistString` / `picklistInteger`: lista completa de valores y si es lista cerrada (solo esos valores) o abierta
-
-**Resuelve GUIDs crípticos**: `Custom.c12a8be8-...` → obtén el nombre UI real. Si el nombre UI sigue sin ser claro, el propósito se infiere en el paso siguiente con los work items reales.
-
-#### III. Leer work items exitosos para entender el propósito real de cada campo
-
-Consulta work items cerrados exitosamente (últimos 60 días, distintos tipos):
-```sql
-SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],[System.AssignedTo]
-FROM workitems
-WHERE [System.TeamProject] = '<proyecto ancla>'
-  AND [System.State] IN ('Cerrado', 'Done', 'Closed', 'Completed')
-  AND [System.ChangedDate] >= @Today - 60
-ORDER BY [System.ChangedDate] DESC
-```
-
-Elige 2-3 de distintos tipos y léelos con `raw: true`. De cada uno extrae:
-- Qué campos tienen valor real (vs. los que siempre están vacíos → son opcionales en la práctica)
-- Valores típicos de campos custom (`Custom.Prioridad = 1`, `Custom.EstimacionInicial = 3`, etc.) → confirma el significado semántico del campo
-- Formato de Descripción y Criterios de Aceptación: ¿HTML o texto plano? ¿extensión típica?
-- Convenciones de títulos: verbos, prefijos, longitud
-- Comentarios de cierre: ¿existen? ¿en qué formato?
-
-Con esta información completa el campo **"Para qué sirve"** de cada campo en el catálogo.
-
-#### IV. Work items de compañeros para descubrir tipos adicionales
-
-```sql
-SELECT [System.Id],[System.WorkItemType],[System.Title],[System.State],
-       [System.AssignedTo],[System.CreatedBy]
-FROM workitems
-WHERE [System.TeamProject] = '<proyecto ancla>'
-  AND [System.AssignedTo] <> '<email del usuario>'
-  AND [System.IterationPath] UNDER '<iteración actual>'
-ORDER BY [System.WorkItemType],[System.AssignedTo]
-```
-
-Puede revelar tipos que el usuario actual nunca crea pero que existen (ej. Bug, Test Case, Incidente). Para cada tipo nuevo encontrado, aplica el mismo catálogo de campos del paso II.
-
-#### V. Iteraciones del equipo
-
-Lee todas las iteraciones del team → sprint activo, fechas, patrón de naming, duración promedio en días hábiles.
-
-#### VI. Construir el field-catalog completo
-
-Para cada tipo de work item encontrado (incluyendo los de compañeros), genera una tabla con **todos** los campos documentados:
-
-| Campo (`referenceName`) | Nombre UI | Tipo | Obligatorio | Lista cerrada | Valores | Para qué sirve |
-|---|---|---|---|---|---|---|
-| `System.Title` | Título | Texto | ✅ | No | Libre | Nombre corto y descriptivo del ítem |
-| `System.Description` | Descripción | HTML | ✅ | No | Libre | Contexto, objetivo y detalles técnicos |
-| `Microsoft.VSTS.Common.AcceptanceCriteria` | Criterios de Aceptación | HTML | ✅ | No | Libre | Condiciones verificables para considerar el ítem completo — se observó que el equipo las escribe como lista `<ul>` en HTML |
-| `System.AssignedTo` | Asignado a | Identidad | ✅ | No | Usuarios del proyecto | Responsable de ejecutar el trabajo |
-| `Custom.Prioridad` | Prioridad | Entero | ✅ | ✅ `[1, 2]` | 1=semana 1, 2=semana 2 | Prioridad dentro del sprint; se observó que el equipo prioriza por semana |
-| `Custom.c12a8be8-...` | Estimación Inicial | Entero | ✅ | ✅ `[1,2,3,5,8]` | Fibonacci | Esfuerzo estimado en puntos al inicio — se observó que nunca se modifica una vez creado |
-| `Microsoft.VSTS.Scheduling.RemainingWork` | Horas Restantes | Decimal | ✅ | No | Número | Horas de trabajo que faltan para completar la subtarea |
-| `Microsoft.VSTS.Common.Activity` | Actividad | Texto | ✅ | ✅ | Development / Analysis / Design / Testing / Documentation | Categoría del tipo de trabajo; se observó que Development es el valor más frecuente |
-
-> La columna **"Para qué sirve"** combina: nombre UI + valores típicos observados en work items reales + documentación estándar de Azure DevOps para campos `Microsoft.VSTS.*`. En campos con GUIDs opacos, los valores reales de los items cerrados son la principal fuente.
-
----
-
-## PASO 4 — Tabla de confirmación única
-
-Presenta todo lo descubierto + lo que dijo el usuario en una sola tabla:
-
-```
-📊 Resumen del workspace — ¿Todo correcto?
-
-👤 USUARIO
-  Nombre:  [del paso 2]
-  Email:   [del paso 2]
-  Rol:     [del paso 2]
-
-🔗 AZURE DEVOPS
-  Organización:  contoso
-  Proyecto:      Mi_Proyecto
-  Equipo:        equipo-backend
-
-📅 SPRINT ACTIVO
-  Nombre:  Sprint 12
-  Fechas:  2026-04-07 → 2026-04-22 (11 días hábiles)
-
-📋 JERARQUÍA DETECTADA
-  Feature → Tarea → Subtarea
-
-✅ ESTADOS
-  Activos: New | En progreso | Impedimento
-  Cierre:  Cerrado
-
-🔧 CAMPOS CUSTOM
-  Custom.Prioridad          → "Prioridad" [1, 2] — lista cerrada
-  Custom.c12a8be8-...       → "Estimación Inicial" [1,2,3,5,8] — lista cerrada
-  Microsoft.VSTS.Common.Activity → "Actividad" [Development, Analysis, Design, Testing, Documentation]
-
-🏷️ TAGS FRECUENTES
-  [BACKEND], T1-2026
-
-📁 CARPETA LOCAL
-  tasks/{id} - {titulo}/task.json + subtasks.json + *_evidencia.md
-
-¿Apruebas? Escribe "sí" para guardar, o "ajustar X" si algo está mal.
-```
-
----
-
-## PASO 5 — Guardar y activar perfil
-
-Una vez confirmado:
-
-1. Pide el nombre del perfil:
-   > "¿Cómo quieres llamar a este perfil? (ej. `backend`, `mi-equipo`, `squad-pagos`)"
-
-2. Genera y escribe los archivos del perfil. Reglas específicas por archivo:
-
-   **`field-catalog.md`**: Incluye **todos** los tipos de work item encontrados (incluyendo los de compañeros), con todos sus campos documentados según el esquema de la tabla del paso 3d-VI. No omitas ningún tipo ni campo.
-
-   **`custom-context.md`**: Este archivo se genera **desde cero** basándose **exclusivamente** en lo observado en el proyecto durante la investigación + lo que el usuario dijo en la pregunta 4. **No uses ningún ejemplo del workspace como plantilla** — cada proyecto es diferente. Estructura mínima:
-
-   ```markdown
-   # Contexto del equipo — [nombre del equipo/proyecto]
-
-   > Generado por @setup-wizard el [fecha]. Edítalo libremente.
-   > Los agentes leen este archivo antes de crear o gestionar work items.
-
-   ## Rol del equipo
-   [Qué hace este equipo según lo observado y lo que el usuario describió. Si el usuario no lo aclaró, describe solo lo inferido de los datos ADO.]
-
-   ## Jerarquía de trabajo
-   [Jerarquía observada — ej: Epic → User Story → Task, o Feature → Tarea → Subtarea. Solo lo que existe en ADO.]
-
-   ## Sprint
-   [Duración observada, fechas del activo, patrón de nombres. Solo datos factuales.]
-
-   ## Convenciones observadas
-   [Tags frecuentes y su patrón, convenciones en títulos de work items, formato de descripción/AC (HTML o texto), si los comentarios de cierre son habituales.]
-
-   ## Contexto adicional del equipo
-   [Lo que el usuario describió en la pregunta 4. Si no respondió nada, escribe: "Sin contexto adicional proporcionado."]
-   ```
-
-   Lo que **no va** en este archivo:
-   - Reglas prescriptivas que no observaste en los datos (no inventes que "las evidencias son obligatorias" si no lo viste)
-   - Detalles de implementación específicos de un solo proyecto
-   - Suposiciones sobre metodología que el usuario no confirmó
-
-   **Los demás archivos:**
-   - `config/profiles/<nombre>/profile.json`
-   - `config/profiles/<nombre>/workflow.json`
-   - `config/active-profile.json` y `config/active-workflow.json`
-
-3. Genera `restricciones_sprint` y `README_sprint_<nombre>.md` con las fechas detectadas.
-
-4. Finaliza con:
-```
-✅ Todo listo. Workspace configurado para [teamName].
-
-  Servidor MCP:  <runtime>
-  Sprint activo: <nombre> (<inicio> → <fin>)
-  Rol:           <userRole>
-
-Para empezar el día:    @sprint-manager
-Para crear work items:  @work-item-creator
-Para cerrar tareas:     @task-closer
-```
-
----
-
-## Plantillas mcp.json por runtime
-
-**docker / podman:**
-```json
-{
-  "inputs": [
-    { "id": "azure_devops_org", "type": "promptString", "description": "Azure DevOps organization name (e.g. 'contoso')" },
-    { "id": "azure_devops_pat", "type": "promptString", "description": "Azure DevOps Personal Access Token (PAT)", "password": true }
-  ],
-  "servers": {
-    "azure-devops-mcp": {
-      "command": "<docker|podman>",
-      "args": ["run", "--rm", "-i",
-        "--env", "AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
-        "--env", "AZURE_DEVOPS_PAT=${input:azure_devops_pat}",
-        "sjseo298/mcp-azure-devops", "stdio"]
-    }
-  }
-}
-```
-
-**jar:**
-```json
-{
-  "inputs": [
-    { "id": "azure_devops_org", "type": "promptString", "description": "Azure DevOps organization name (e.g. 'contoso')" },
-    { "id": "azure_devops_pat", "type": "promptString", "description": "Azure DevOps Personal Access Token (PAT)", "password": true }
-  ],
-  "servers": {
-    "azure-devops-mcp": {
-      "command": "java",
-      "args": ["-jar", "${workspaceFolder}/tools/mcp-azure-devops.jar",
-        "--azure.devops.organization=${input:azure_devops_org}",
-        "--azure.devops.pat=${input:azure_devops_pat}"]
-    }
-  }
-}
-```
-
-> VS Code pedirá la organización y el PAT la primera vez que arranque el servidor. Los guarda de forma segura — no los vuelve a pedir.
-
----
-
-## Si el usuario rechaza configurar MCP
-
-> "⛔ El servidor MCP es el núcleo de este workspace — sin él, ningún agente puede conectarse a Azure DevOps y el workspace no tiene propósito.
->
-> Si el problema es de licencias, **Podman** es gratuito en cualquier entorno corporativo y funciona igual que Docker. ¿Te ayudo a instalarlo?"
-
-No ofrezcas modo manual alternativo — no existe.
-
----
-
-## PASO 0 — Estado actual
-
-Antes de cualquier acción, lee:
-- `config/active-profile.json` (si existe → workspace ya configurado, preguntar si reconfigurar o crear perfil extra)
-- `config/active-workflow.json` (si existe)
-
-Si ya hay configuración activa, muestra resumen y pregunta:
-> "Ya tienes un perfil activo para **[teamName]**. ¿Quieres reconfigurarlo, crear un perfil adicional para otro equipo, o salir?"
-
----
-
-## PASO 1 — Conexión MCP (obligatorio, no negociable)
-
-El servidor MCP es **el corazón del workspace**. Sin él, ningún agente funciona. Establece la conexión antes de cualquier otra cosa.
-
-### 1a — Verificar runtime disponible
-
-Ejecuta en terminal para detectar qué hay disponible:
 ```bash
 (docker info > /dev/null 2>&1 && echo "docker:ok") || echo "docker:no"
 (podman info > /dev/null 2>&1 && echo "podman:ok") || echo "podman:no"
@@ -441,15 +305,19 @@ Escribe `.vscode/mcp.json` con el runtime encontrado:
   "servers": {
     "azure-devops-mcp": {
       "command": "java",
-      "args": ["-jar", "${workspaceFolder}/tools/mcp-azure-devops.jar",
-        "--azure.devops.organization=${input:azure_devops_org}",
-        "--azure.devops.pat=${input:azure_devops_pat}"]
+      "args": [
+        "-jar", "${workspaceFolder}/tools/AzureDevopsCompanionMCP-0.9.0.jar",
+        "--AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
+        "--AZURE_DEVOPS_PAT=${input:azure_devops_pat}"
+      ]
     }
   }
 }
 ```
 
 > **Nota al usuario**: La primera vez que arranque el MCP, VS Code pedirá el nombre de la organización y el PAT. Los almacena de forma segura — no los pide otra vez.
+>
+> **Requisito JAR**: Java **17 o superior** (recomendado: Java 21 LTS). Descarga en https://adoptium.net/ si no lo tienes.
 
 ---
 
