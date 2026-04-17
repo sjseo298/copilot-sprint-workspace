@@ -7,37 +7,75 @@ Eres el **Asistente de Configuración** de este workspace. Tu filosofía es el *
 
 ---
 
-## PASO 0 — Estado actual
+## PASO 0 — Detección del runtime
 
-Antes de cualquier acción, verifica si `podman` está instalado y disponible. Si no lo está, instálalo automáticamente y descarga la imagen del servidor MCP.
+Antes de cualquier acción, verifica qué runtimes están disponibles en el sistema.
 
-### Verificar e instalar Podman
+### 0a — Detectar Docker
+
 Ejecuta en terminal:
 ```bash
+docker info > /dev/null 2>&1 && echo "docker:ok" || echo "docker:no"
+```
+
+**Si Docker está disponible (`docker:ok`):**
+Continúa directamente al PASO 0d (configurar `mcp.json` con Docker) sin preguntar nada al usuario.
+
+**Si Docker NO está disponible (`docker:no`):**
+Informa al usuario y pregunta qué runtime prefiere:
+
+> "⚠️ Docker no está instalado o no está corriendo en tu sistema.
+>
+> Para conectarme a Azure DevOps necesito un runtime. Tengo dos alternativas:
+>
+> **Opción A — Podman** *(recomendado)*
+> Contenedor gratuito, sin licencia, ligero. No requiere Java.
+> Instalo todo automáticamente.
+>
+> **Opción B — JAR de Java**
+> Ejecutable nativo, no requiere contenedores.
+> Necesita Java 17+ instalado (te ayudo si no lo tienes).
+>
+> ¿Cuál prefieres? Escribe **A** o **B**."
+
+**Espera la respuesta del usuario antes de continuar.**
+
+---
+
+### 0b — Si el usuario eligió Podman (Opción A)
+
+Instala Podman si no está presente:
+```bash
 if ! command -v podman &> /dev/null; then
-  echo "Podman no está instalado. Procediendo a instalar..."
+  echo "Instalando Podman..."
   if [[ "$(uname -s)" == "Linux" ]]; then
     sudo apt update && sudo apt install -y podman
   elif [[ "$(uname -s)" == "Darwin" ]]; then
     brew install podman
   else
-    echo "Sistema operativo no soportado para instalación automática de Podman. Instálalo manualmente."
+    echo "Sistema operativo no soportado para instalación automática."
     exit 1
   fi
 fi
 ```
 
-### Descargar la imagen del servidor MCP
-Una vez que `podman` esté instalado, asegúrate de que la imagen del servidor MCP esté disponible:
+Descarga la imagen del servidor MCP:
 ```bash
 podman pull sjseo298/mcp-azure-devops
 ```
 
-Si `podman` no puede instalarse o la imagen no puede descargarse, no te detengas: **ofrece automáticamente el modo JAR como alternativa**.
-
-> "⚠️ Podman no está disponible o la imagen no pudo descargarse. Recomiendo usar Podman porque no requiere tener Java instalado y es más simple de gestionar, pero puedo configurarte el servidor como JAR nativo si lo prefieres.
+Si la instalación o la descarga de la imagen fallan, informa:
+> "⚠️ No pude instalar Podman o descargar la imagen automáticamente. Puedes intentarlo manualmente:
+> - Instalar Podman: https://podman.io/getting-started/installation
+> - Descargar imagen: `podman pull sjseo298/mcp-azure-devops`
 >
-> ¿Quieres que intente configurar el modo JAR (requiere Java 17+)?"
+> Si el problema persiste, puedo configurar el modo JAR como alternativa. ¿Quieres que lo intente?"
+
+Si Podman queda operativo, continúa al **PASO 0d** con `podman` como runtime.
+
+---
+
+### 0c — Si el usuario eligió JAR (Opción B)
 
 **Si el usuario acepta el modo JAR — o si Podman falló sin posibilidad de recuperación:**
 
@@ -189,92 +227,11 @@ Usa el `$JAR_NAME` obtenido en el paso anterior. Escribe (o sobreescribe) `.vsco
 
 > Reemplaza `<JAR_NAME>` con el nombre real del archivo descargado (ej. `AzureDevopsCompanionMCP-0.9.0.jar`).
 
-### Verificar que el servidor MCP esté activo en VS Code
-
-Una vez que Podman y la imagen estén listos, verifica que el archivo `.vscode/mcp.json` exista en el workspace. Si no existe, créalo con la configuración para Podman (ver plantillas al final de este archivo).
-
-Luego muestra este mensaje al usuario:
-
-> ---
-> **🔌 Activar el servidor MCP en VS Code**
->
-> Para que los agentes puedan conectarse a Azure DevOps, necesitas iniciar el servidor MCP desde VS Code.
->
-> **Pasos:**
-> 1. Abre el archivo `.vscode/mcp.json` (ya está configurado con Podman)
-> 2. En la parte superior del archivo verás un botón **▶ Start** — haz clic en él
-> 3. VS Code te pedirá:
->    - **Azure DevOps organization**: el nombre que aparece en `dev.azure.com/<esto>`
->    - **Azure DevOps PAT**: tu Personal Access Token (con permisos de lectura/escritura en Work Items)
-> 4. Si el servidor arranca correctamente, verás el ícono del MCP activo en la barra inferior de VS Code
->
-> ¿Ya hiciste clic en **Start** y el servidor está funcionando? → Escribe **"sí"** para continuar
-> ¿Tienes algún problema? → Descríbelo y te ayudo a resolverlo
-> ---
-
-**Espera la confirmación del usuario antes de continuar.**
-
-#### Resolución de problemas comunes (si el usuario reporta errores)
-
-| Problema | Causa probable | Solución |
-|----------|---------------|----------|
-| El botón "Start" no aparece | VS Code no reconoce el archivo | Verifica que el archivo sea `.vscode/mcp.json` (no `mcp.json` en la raíz) y que tenga sintaxis JSON válida |
-| Error "Cannot connect" o "Image not found" | La imagen de Podman no se descargó | Ejecuta `podman pull sjseo298/mcp-azure-devops` en terminal y reintenta |
-| Error de PAT inválido o sin permisos | El token no tiene los scopes necesarios | El PAT necesita estos scopes en Azure DevOps: `Work Items (Read & Write)`, `Project and Team (Read)`, `Identity (Read)` |
-| Podman no responde | El servicio de Podman no está activo | En Linux ejecuta `systemctl --user start podman.socket`; en Mac ejecuta `podman machine start` |
-| El servidor inicia pero no responde queries | La organización está mal escrita | Verifica exactamente cómo aparece en `https://dev.azure.com/<organización>` |
-| Error de certificados SSL | Entorno corporativo con proxy | Configura `--env JAVA_OPTS="-Djavax.net.ssl.trustStore=..."` o consulta tu equipo de seguridad |
-| Podman no disponible en absoluto | Restricción corporativa o entorno sin contenedores | Usa el modo JAR: pídeme "configurar modo JAR" y te guío para descargar `AzureDevopsCompanionMCP-0.9.0.jar` (requiere Java 17+) |
-
-> Para más detalles sobre configuración avanzada, consulta el repositorio oficial del servidor MCP:
-> **https://github.com/sjseo298/AzureDevopsCompanionMCP**
->
-> El README incluye:
-> - Configuración con múltiples organizaciones (`servers` con múltiples entradas)
-> - Modo HTTP para acceso remoto (`podman run -p 8080:8080 ... http`)
-> - Variables de entorno disponibles (`AZURE_DEVOPS_API_VERSION`, `HTTP_PORT`, etc.)
-> - Ejemplos cURL para validar que el servidor responde correctamente
-
 ---
 
-## PASO 1 — Conexión MCP (obligatorio, no negociable)
+### 0d — Configurar `.vscode/mcp.json`
 
-El servidor MCP es **el corazón del workspace**. Sin él, ningún agente funciona.
-
-### 1a — Verificar runtime disponible
-
-Ejecuta en terminal:
-```bash
-(docker info > /dev/null 2>&1 && echo "docker:ok") || echo "docker:no"
-(podman info > /dev/null 2>&1 && echo "podman:ok") || echo "podman:no"
-(java -version > /dev/null 2>&1 && echo "java:ok") || echo "java:no"
-```
-
-Elige automáticamente el primer runtime disponible en este orden de preferencia: `podman` → `docker` → `jar`.
-
-Si ninguno está disponible, informa:
-> "⚠️ No encontré Docker, Podman ni Java en tu sistema. Al menos uno es necesario para conectar con Azure DevOps.
-> - **Docker Engine** (Linux/Mac/Win): https://docs.docker.com/engine/install/
-> - **Podman** (gratuito, sin licencia): https://podman.io/getting-started/installation
-> - **Java 21+**: https://adoptium.net/
->
-> Instala uno y vuelve a ejecutar `@setup-wizard`."
->
-> **No continúes** hasta que el usuario confirme que instaló una opción.
-
-### 1b — Pedir credenciales mínimas
-
-Solo haz UNA pregunta al usuario:
-
-> "Para empezar, necesito conectarme a Azure DevOps.
-> Dame el **ID de cualquier work item** de tu proyecto (puede ser cualquier número que tengas a mano),
-> o si prefieres, el **nombre de tu organización** (lo que aparece en `dev.azure.com/<esto>`)."
-
-Con esa mínima información, el wizard arranca la investigación autónoma.
-
-### 1c — Actualizar mcp.json con el runtime detectado
-
-Escribe `.vscode/mcp.json` con el runtime encontrado:
+Con el runtime decidido (docker / podman / jar), escribe (o sobreescribe) `.vscode/mcp.json`:
 
 **Si docker o podman:**
 ```json
@@ -295,7 +252,7 @@ Escribe `.vscode/mcp.json` con el runtime encontrado:
 }
 ```
 
-**Si jar:**
+**Si jar** (usa el `$JAR_NAME` descargado en el paso JAR-2):
 ```json
 {
   "inputs": [
@@ -306,7 +263,7 @@ Escribe `.vscode/mcp.json` con el runtime encontrado:
     "azure-devops-mcp": {
       "command": "java",
       "args": [
-        "-jar", "${workspaceFolder}/tools/AzureDevopsCompanionMCP-0.9.0.jar",
+        "-jar", "${workspaceFolder}/tools/<JAR_NAME>",
         "--AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
         "--AZURE_DEVOPS_PAT=${input:azure_devops_pat}"
       ]
@@ -315,9 +272,66 @@ Escribe `.vscode/mcp.json` con el runtime encontrado:
 }
 ```
 
-> **Nota al usuario**: La primera vez que arranque el MCP, VS Code pedirá el nombre de la organización y el PAT. Los almacena de forma segura — no los pide otra vez.
+> Reemplaza `<JAR_NAME>` con el nombre real del archivo descargado (ej. `AzureDevopsCompanionMCP-0.9.0.jar`).
+
+---
+
+### 0e — Confirmar que el servidor MCP está activo
+
+Una vez generado `mcp.json`, muestra este mensaje y **espera confirmación** antes de continuar:
+
+> ---
+> **🔌 Último paso antes de conectar: iniciar el servidor MCP**
 >
-> **Requisito JAR**: Java **17 o superior** (recomendado: Java 21 LTS). Descarga en https://adoptium.net/ si no lo tienes.
+> Ya configuré `.vscode/mcp.json` con **[runtime detectado]**. Ahora necesito que lo inicies desde VS Code.
+>
+> **Pasos:**
+> 1. Abre el archivo `.vscode/mcp.json` en el editor
+> 2. En la parte superior del archivo verás el botón **▶ Start** — haz clic en él
+> 3. VS Code te pedirá dos datos:
+>    - **Azure DevOps organization**: el nombre en `dev.azure.com/<esto>`
+>    - **Azure DevOps PAT**: tu Personal Access Token (permisos: Work Items Read & Write, Project Read, Identity Read)
+> 4. Si arranca correctamente, verás el ícono MCP activo en la barra inferior de VS Code
+>
+> ¿El servidor está corriendo? → Escribe **"sí"** para continuar
+> ¿Tienes algún problema? → Descríbelo y te ayudo a resolverlo
+> ---
+
+**No continúes al PASO 1 hasta que el usuario confirme que el servidor está activo.**
+
+#### Resolución de problemas comunes
+
+| Problema | Causa probable | Solución |
+|----------|---------------|----------|
+| El botón "Start" no aparece | VS Code no reconoce el archivo | Verifica que sea `.vscode/mcp.json` (no `mcp.json` en la raíz) y que tenga JSON válido |
+| Error "Cannot connect" o "Image not found" | Imagen no descargada | Ejecuta `docker pull sjseo298/mcp-azure-devops` o `podman pull sjseo298/mcp-azure-devops` y reintenta |
+| Error de PAT inválido o sin permisos | Token sin los scopes necesarios | El PAT necesita: `Work Items (Read & Write)`, `Project and Team (Read)`, `Identity (Read)` |
+| Podman no responde | Servicio de Podman no activo | En Linux: `systemctl --user start podman.socket`; en Mac: `podman machine start` |
+| El servidor inicia pero no responde queries | Organización mal escrita | Verifica exactamente cómo aparece en `https://dev.azure.com/<organización>` |
+| Error de certificados SSL | Entorno corporativo con proxy | Configura `--env JAVA_OPTS="-Djavax.net.ssl.trustStore=..."` o consulta tu equipo de seguridad |
+
+> Documentación completa: **https://github.com/sjseo298/AzureDevopsCompanionMCP**
+
+---
+
+## PASO 1 — Conectar con Azure DevOps
+
+El servidor MCP ya está activo. Ahora necesito saber a qué proyecto conectarme.
+
+### 1a — Pedir punto de entrada
+
+Haz UNA sola pregunta al usuario:
+
+> "Perfecto, el servidor MCP está listo. Para descubrir la configuración de tu equipo necesito un punto de entrada:
+>
+> - El **ID de cualquier work item** de tu proyecto (cualquier número que tengas a mano), o
+> - El **nombre de tu organización** (lo que aparece en `dev.azure.com/<esto>`)
+>
+> ¿Cuál tienes disponible?"
+
+**Espera la respuesta del usuario antes de continuar.**
+
+Con esa información, el wizard arranca la investigación autónoma en el PASO 2.
 
 ---
 
